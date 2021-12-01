@@ -5,15 +5,15 @@ routines for transforming between sky coordinates and galaxy disk plane,
 and between SkyCoord and tangent-plane (gnomonic) coordinates."""
 
 # This probably makes poor use of the astropy coordinate framework's flexibility, but it appears to work.
-# Currently each frame requires its own pair of icrs_to_gal, gal_to_icrs transformations with appropriate decorator.
+# Currently each explicitly named frame requires its own pair of icrs_to_gal, gal_to_icrs transformations with appropriate decorator.
 
 
 import numpy as np
 
 from astropy import units as u
+from astropy.coordinates import representation as r
 from astropy.coordinates import ICRS, SkyCoord, SkyOffsetFrame
 from astropy.coordinates.matrix_utilities import rotation_matrix, matrix_product, matrix_transpose
-from astropy.coordinates import representation as r
 from astropy.coordinates.baseframe import BaseCoordinateFrame, frame_transform_graph
 from astropy.coordinates.attributes import CoordinateAttribute, QuantityAttribute, DifferentialAttribute
 from astropy.coordinates.transformations import AffineTransform
@@ -21,12 +21,25 @@ from astropy.coordinates.errors import ConvertError
 
 
 class ExternalGalaxyFrame(BaseCoordinateFrame):
-    """Astropy coordinate frame representing an external galaxy as defined by sky coordinate, distance,
-    heliocentric velocity, along with inclination and position angle.
-    Heavily modeled on astropy's Galactocentric class, but without the defaults-setting mechanism.
-    x, y, and z are defined such that with inclination and position angle 0, x points along RA,
+    """Astropy coordinate frame centered on an external galaxy.
+
+    The frame is defined by sky coordinate, heliocentric distance and velocity, and inclination and position angle.
+    Modeled on astropy's Galactocentric class, but without that class's defaults-setting mechanism.
+    x, y, and z are defined such that with inclination and position angle both 0, x points along RA,
     y along dec, and z into sky. With nonzero inclination y will still point within the plane of the sky,
-    while x and z rotate about the y axis."""
+    while x and z rotate about the y axis.
+
+    Keyword Arguments:
+        gal_coord: Scalar SkyCoord or Frame object
+            Contains sky position of galaxy
+        gal_distance: Quantity (units of length, e.g. u.kpc)
+            Distance to galaxy
+        galvel_heliocentric: CartesianDifferential, units of velocity
+            3-d heliocentric velocity of galaxy, in the sky-aligned cartesian frame pointing to galaxy
+            (x=East, y=North, z=distance)
+        inclination: Quantity (units of angle)
+        PA: Quantity (units of angle)
+    """
     default_representation = r.CartesianRepresentation
     default_differential = r.CartesianDifferential
 
@@ -41,10 +54,7 @@ class ExternalGalaxyFrame(BaseCoordinateFrame):
     PA = QuantityAttribute(unit=u.deg)
 
     def __init__(self, *args, **kwargs):
-        """Astropy coordinate frame representing an external galaxy as defined by sky coordinate, distance,
-        heliocentric velocity, along with inclination and position angle.
-        Heavily modeled on astropy's Galactocentric class, but without the defaults-setting mechanism."""
-        # left some test code in here
+        # left some example code for subclasses in here
         default_params = {
             'gal_coord': ICRS(ra=10.68470833 * u.degree, dec=41.26875 * u.degree),
             "gal_distance": 780.0 * u.kpc,
@@ -60,13 +70,14 @@ class ExternalGalaxyFrame(BaseCoordinateFrame):
 
 def _get_matrix_vectors(gal_frame, inverse=False):
     """
-    Use the ``inverse`` argument to get the inverse transformation, matrix and
+    Utility function: use the ``inverse`` argument to get the inverse transformation, matrix and
     offsets to go from external galaxy frame to ICRS.
     """
+    # this is based on the astropy Galactocentric class code
     # shorthand
     gcf = gal_frame
 
-    # rotation matrix to align x(ICRS) with the vector to the Galactic center
+    # rotation matrix to align x(ICRS) with the vector to the galaxy center
     mat0 = np.array([[0., 1., 0.],
                      [0., 0., 1.],
                      [1., 0., 0.]])   # relabel axes so x points in RA, y in dec, z away from us
@@ -126,20 +137,30 @@ def _check_coord_repr_diff_types(c):
                            "components and radial velocity.")
 
 
-@frame_transform_graph.transform(AffineTransform, ICRS, ExternalGalaxyFrame)
-def icrs_to_gal(icrs_coord, gal_frame):
+# next two functions are shorthands to remove a few lines later
+def from_icrs(icrs_coord, gal_frame):
     _check_coord_repr_diff_types(icrs_coord)
     return _get_matrix_vectors(gal_frame)
 
 
-@frame_transform_graph.transform(AffineTransform, ExternalGalaxyFrame, ICRS)
-def gal_to_icrs(gal_coord, icrs_frame):
+def to_icrs(gal_coord, icrs_frame):
     _check_coord_repr_diff_types(gal_coord)
     return _get_matrix_vectors(gal_coord, inverse=True)
 
 
+@frame_transform_graph.transform(AffineTransform, ICRS, ExternalGalaxyFrame)
+def icrs_to_gal(*args):
+    return from_icrs(*args)
+
+
+@frame_transform_graph.transform(AffineTransform, ExternalGalaxyFrame, ICRS)
+def gal_to_icrs(*args):
+    return to_icrs(*args)
+
+
 class M31Frame(ExternalGalaxyFrame):
-    """Frame representing M31.
+    """Coordinate frame representing M31.\n"""
+    __doc__ = __doc__ + ExternalGalaxyFrame.__doc__+"""
     (Careful here - galaxy x and y coordinates as defined in various older papers are
     inconsistent with the convention here, with x and y swapped/reversed."""
     def __init__(self, *args, **kwargs):
@@ -158,19 +179,20 @@ class M31Frame(ExternalGalaxyFrame):
 
 
 @frame_transform_graph.transform(AffineTransform, ICRS, M31Frame)
-def icrs_to_gal(icrs_coord, gal_frame):
-    _check_coord_repr_diff_types(icrs_coord)
-    return _get_matrix_vectors(gal_frame)
+def icrs_to_gal(*args):
+    return from_icrs(*args)
 
 
 @frame_transform_graph.transform(AffineTransform, M31Frame, ICRS)
-def gal_to_icrs(gal_coord, icrs_frame):
-    _check_coord_repr_diff_types(gal_coord)
-    return _get_matrix_vectors(gal_coord, inverse=True)
+def gal_to_icrs(*args):
+    return to_icrs(*args)
 
 
 class M33Frame(ExternalGalaxyFrame):
-    """Frame representing M33."""
+    """Frame representing M33.\n"""
+    __doc__ = __doc__ + ExternalGalaxyFrame.__doc__+"""
+    (Careful here - galaxy x and y coordinates as defined in various older papers are
+    inconsistent with the convention here, with x and y swapped/reversed."""
     def __init__(self, *args, **kwargs):
         # these values for comparison with vdm12 transformation - not necessarily current
         default_params = {
@@ -188,19 +210,18 @@ class M33Frame(ExternalGalaxyFrame):
 
 
 @frame_transform_graph.transform(AffineTransform, ICRS, M33Frame)
-def icrs_to_gal(icrs_coord, gal_frame):
-    _check_coord_repr_diff_types(icrs_coord)
-    return _get_matrix_vectors(gal_frame)
+def icrs_to_gal(*args):
+    return from_icrs(*args)
 
 
 @frame_transform_graph.transform(AffineTransform, M33Frame, ICRS)
-def gal_to_icrs(gal_coord, icrs_frame):
-    _check_coord_repr_diff_types(gal_coord)
-    return _get_matrix_vectors(gal_coord, inverse=True)
+def gal_to_icrs(*args):
+    return to_icrs(*args)
 
 
 class LMCFrame(ExternalGalaxyFrame):
-    """Frame representing the LMC.
+    """Frame representing the LMC.\n"""
+    __doc__ = __doc__ + ExternalGalaxyFrame.__doc__+"""
     Caution: x and y are not necessarly specified in accordance with any convention to the literature,
     but instead follow the general ExternalGalaxyFrame convention."""
     def __init__(self, *args, **kwargs):
@@ -219,20 +240,30 @@ class LMCFrame(ExternalGalaxyFrame):
 
 
 @frame_transform_graph.transform(AffineTransform, ICRS, LMCFrame)
-def icrs_to_gal(icrs_coord, gal_frame):
-    _check_coord_repr_diff_types(icrs_coord)
-    return _get_matrix_vectors(gal_frame)
+def icrs_to_gal(*args):
+    return from_icrs(*args)
 
 
 @frame_transform_graph.transform(AffineTransform, LMCFrame, ICRS)
-def gal_to_icrs(gal_coord, icrs_frame):
-    _check_coord_repr_diff_types(gal_coord)
-    return _get_matrix_vectors(gal_coord, inverse=True)
+def gal_to_icrs(*args):
+    return to_icrs(*args)
 
 
 def coords2xieta(c, c0):
-    """Convert an astropy skycoord to tangent-plane coordinates in degrees,
-    using scalar skycoord c0 to set center and orientation of tangent plane."""
+    """Convert an astropy skycoord to tangent-plane coordinates in degrees.
+
+    Uses scalar skycoord c0 to set center and orientation of tangent plane.
+
+    Parameters:
+        c: Scalar or vector SkyCoord or Frame
+            Sky positions of
+        c0: Scalar SkyCoord or Frame
+            Sky center of coordinate system
+    Returns:
+        xi, eta: floats, in units of degrees (NOT astropy quantity)
+        Tangent-plane coordinates centered on c0 for specified angular positions
+    """
+
     # At one point implemented a frame to do this more directly (fewer trig functions),
     # but couldn't make it play nicely with astropy
     # should check c0 here
@@ -247,9 +278,18 @@ def coords2xieta(c, c0):
 
 
 def xieta2coords(xi, eta, c0):
-    """Convert tangent-plane coordinates in degrees to an astropy skycoord,
-    using scalar skycoord c0 to set center and orientation of tangent plane.
-    Output coordinate will be in same frame as c0."""
+    """Convert tangent-plane coordinates in degrees to an astropy skycoord.
+
+    Uses scalar skycoord c0 to set center and orientation of tangent plane.
+    Output coordinate will be in same frame as c0.
+
+    Parameters:
+        xi, eta: floats, units of degrees (NOT astropy quantity)
+        c0: Scalar SkyCoord or Frame
+            Sky center of coordinate system
+    Returns:
+        SkyCoord containing angular positions, transformed to same frame as c0 (i.e. ICRS or Galactic)
+    """
     # At one point implemented a frame to do this more directly (fewer trig functions),
     # but couldn't make it play nicely with astropy
     # should check c0 here
@@ -265,12 +305,21 @@ def xieta2coords(xi, eta, c0):
 
 
 def diskcoords(c_data, extgalframe, linear=False):
-    """Given incomplete positional information (just sky positions, no distance)
+    """Transformation of sky coordinates to coordinates in disk plane of provided galaxy frame.
+
+    Given incomplete positional information (just sky positions, no distance)
     as coordinate object, and an external galaxy frame instance, return galaxy frame
     spatial coordinates x, y, z inferred to be in disk plane, where z=0 for all points.
     Recall that x points along minor axis and y along major axis, by means of PA definition.
     The transformation is nonlinear, so Newton's method is used to iterate to convergence.
-    This may slow the solution, especially for galaxies with large angular sizes."""
+    This may slow the solution, especially for galaxies with large angular sizes.
+
+    Parameters:
+        c_data: Scalar or Vector-valued SkyCoord or Frame with data
+            Heliocentric sky coordinates of desired points
+        extgalframe: ExternalGalaxyFrame instance
+            Galaxy frame in which to put coordinates
+    """
 
     # assert extgalframe isinstance ExternalGalaxyFrame
     if isinstance(c_data, BaseCoordinateFrame):
@@ -330,8 +379,18 @@ def diskcoords(c_data, extgalframe, linear=False):
 
 def get_galvel(pmra, pmdec, radial_velocity, distance):
     """Utility routine to retrieve a CartesianDifferential from proper motion, velocity, and distance.
+
     This is useful to initialize an ExternalGalaxyFrame, by passing the keyword galvel_heliocentric=get_galvel(
-         1.0*u.mas/u.yr, 2.0*u.mas/u.yr, radial_velocity=250.*u.km/u.s, distance=400.*u.kpc)"""
+         1.0*u.mas/u.yr, 2.0*u.mas/u.yr, radial_velocity=250.*u.km/u.s, distance=400.*u.kpc)
+    Parameters:
+        pmra, pmdec: Quantity dimension of angle/time
+            Proper motion in RA, dec directions. Here pmra means metric and not coordinate velocity
+            (i.e., cos factor should be included)
+        radial_velocity: Quantity, dimension of velocity
+            Heliocentric radial velocity
+        distance: Quantity, dimension of length
+            Heliocentric distance
+    """
     v_x = (pmra * distance / u.rad).to(u.km / u.s)
     v_y = (pmdec * distance / u.rad).to(u.km / u.s)
     v_z = radial_velocity.to(u.km / u.s)
