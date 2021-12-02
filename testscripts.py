@@ -217,6 +217,20 @@ def test_m33velocity():
     print(foo)
 
 
+def test_xieta():
+    c0 = SkyCoord(M31Frame().gal_coord)
+    rsq = np.random.uniform(0., 10., 200)
+    theta = np.random.uniform(0., 2.*np.pi, 200)
+    r = np.sqrt(rsq)
+    xi1 = r * np.cos(theta)
+    eta1 = r * np.sin(theta)
+    c = xieta2coords(xi1, eta1, c0)
+    xi2, eta2 = coords2xieta(c, c0)
+    print('differences should be small:')
+    print((xi2-xi1).mean(), (xi2-xi1).std())
+    print((eta2-eta1).mean(), (eta2-eta1).std())
+
+
 def do():
     test_m31frame_roundtrip()
     test_m31galactocentric()
@@ -227,3 +241,5 @@ def do():
     test_lmcframe_roundtrip()
     test_deprojection()
     test_frameprop()
+    test_xieta()
+
