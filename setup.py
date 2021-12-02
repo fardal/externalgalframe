@@ -1,11 +1,11 @@
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as readme_file:
     readme = readme_file.read()
 
 # requirements = ["ipython>=6", "nbformat>=4"]
-requirements = ["numpy", "astropy"].  # not sure about these
+requirements = ["numpy", "astropy"]  # not sure about version numbers for these
 
 setup(
     name="externalgalframe",
