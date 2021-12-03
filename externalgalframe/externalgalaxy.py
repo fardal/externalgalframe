@@ -53,7 +53,7 @@ class ExternalGalaxyFrame(BaseCoordinateFrame):
     inclination = QuantityAttribute(unit=u.deg)
     PA = QuantityAttribute(unit=u.deg)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, skyalign=False, **kwargs):
         # left some example code for subclasses in here
         default_params = {
             'gal_coord': ICRS(ra=10.68470833 * u.degree, dec=41.26875 * u.degree),
@@ -64,6 +64,9 @@ class ExternalGalaxyFrame(BaseCoordinateFrame):
         }
         kwds = dict()
         kwds.update(default_params)
+        if skyalign:
+            kwds['inclination'] = 0. * u.deg
+            kwds['PA'] = 0. * u.deg
         kwds.update(kwargs)
         super().__init__(*args, **kwds)
 
