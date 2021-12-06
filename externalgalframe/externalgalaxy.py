@@ -165,13 +165,22 @@ class M31Frame(ExternalGalaxyFrame):
     """Coordinate frame representing M31.\n"""
     __doc__ = __doc__ + ExternalGalaxyFrame.__doc__+"""
     (Careful here - galaxy x and y coordinates as defined in various older papers are
-    inconsistent with the convention here, with x and y swapped/reversed."""
+    inconsistent with the convention here, with x and y swapped/reversed.
+    Data sources:
+        coordinates: 00 42 44.330  41 16 07.50, Skrutskie+ 2006 via Simbad
+        distance: 770 kpc, van der Marel+ 2012   note error ~ 25 kpc
+        radial velocity: -300 km/s, McConnachie 2012 via Simbad
+        PM: pmra (with cosdec factor), pmdec = 49, -38 microarcsec/yr, van der Marel+ 2019, HST+Gaia
+           note error ~ 11 muas/yr leading to ~40 km/s velocity errors
+        inclination: 77 deg, Simien+ 1978 (NW side closer, our view gives "underside")
+        PA: 37 deg, de Vaucouleurs 1958
+    """
     def __init__(self, *args, **kwargs):
         # these values for comparison with vdm12 transformation - not necessarily current
         default_params = {
             'gal_coord': ICRS(ra=10.68470833 * u.degree, dec=41.26875 * u.degree),
             "gal_distance": 770.0 * u.kpc,
-            "galvel_heliocentric": r.CartesianDifferential([125.2, -73.8, -301.] * (u.km / u.s)),
+            "galvel_heliocentric": r.CartesianDifferential([178.9, -138.8, -301.] * (u.km / u.s)),
             "inclination": (-77.) * u.degree,
             "PA": 37. * u.degree,
         }
