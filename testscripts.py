@@ -33,10 +33,15 @@ def test_m31frame_roundtrip():
 def test_m31galactocentric():
     """Try to reproduce the transformation of M31 velocity from heliocentric to galactocentric in vdm12"""
     kms = u.km / u.s
+    # Set point at M31 pos/vel. Can either pass all parameters to SkyCoord...
+    # c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
+    #               gal_distance=770.*u.kpc,
+    #               galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms),
+    #               frame=M31Frame)
+    # or initialize M31 frame separately and then use it as frame
+    m31frame = M31Frame(gal_distance=770.*u.kpc, galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms))
     c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
-                  gal_distance=770.*u.kpc,
-                  galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms),
-                  frame=M31Frame)
+                     frame=m31frame)
     print(c0)
     c_i = c0.transform_to(ICRS)
     print('proper motion:')
@@ -55,6 +60,7 @@ def test_m31galactocentric():
     vdm12 = np.array([66.1, -76.3, 45.1])
     print('velocity:')
     print(answer)
+    print('difference from answer in paper:')
     print(answer - vdm12)
 
     # also do position
@@ -62,7 +68,43 @@ def test_m31galactocentric():
     vdm12 = np.array([-378.9, 612.7, -283.1])
     print('position:')
     print(answer)
+    print('difference from answer in paper:')
     print(answer - vdm12)
+
+
+def test_m31galactocentric2():
+    """Try to reproduce the transformation of M31 velocity from heliocentric to galactocentric in vdm19"""
+    kms = u.km / u.s
+    # Set point at M31 pos/vel. Can either pass all parameters to SkyCoord...
+    # c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
+    #               gal_distance=770.*u.kpc,
+    #               galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms),
+    #               frame=M31Frame)
+    # or initialize M31 frame separately and then use it as frame
+    m31frame = M31Frame(gal_distance=770.*u.kpc, galvel_heliocentric=CartesianDifferential([178.9, -138.8, -301.] * kms))
+    c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
+                     frame=m31frame)
+    print(c0)
+    c_i = c0.transform_to(ICRS)
+    print('proper motion:')
+    print(c_i.proper_motion)
+
+    gcframe = Galactocentric(galcen_distance=8.29 * u.kpc, galcen_v_sun=(11.1, 239. +12.24, 7.25) * kms,
+                             z_sun=0. * u.kpc, roll=0. * u.deg)  # think this is vdM12b as used in vdM19
+    c = c0.transform_to(gcframe)
+    answer = c.velocity.to_cartesian().xyz.value
+    vdm19 = np.array([34., -123., -19.])
+    print('velocity:')
+    print(answer)
+    print('difference from answer in paper:')
+    print(answer - vdm19)
+
+    # also do position
+    # answer = c.cartesian.xyz.value
+    # vdm12 = np.array([-378.9, 612.7, -283.1])
+    # print('position:')
+    # print(answer)
+    # print(answer - vdm12)
 
 
 def m31velocity():
