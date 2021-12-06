@@ -3,11 +3,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from astropy.coordinates import SkyCoord, ICRS, Galactocentric, representation
+from astropy.coordinates import SkyCoord, ICRS, Galactocentric
+from astropy.coordinates.representation import CartesianDifferential
 import astropy.units as u
 
 
-from externalgalaxy import M31Frame, M33Frame, LMCFrame, diskcoords, get_galvel, xieta2coords, coords2xieta
+from externalgalframe.externalgalaxy import M31Frame, M33Frame, LMCFrame, diskcoords, get_galvel, xieta2coords, coords2xieta
 
 
 def test_m31frame_roundtrip():
@@ -34,7 +35,7 @@ def test_m31galactocentric():
     kms = u.km / u.s
     c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
                   gal_distance=770.*u.kpc,
-                  galvel_heliocentric=representation.CartesianDifferential([125.2, -73.8, -301.] * kms),
+                  galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms),
                   frame=M31Frame)
     print(c0)
     c_i = c0.transform_to(ICRS)
@@ -64,8 +65,24 @@ def test_m31galactocentric():
     print(answer - vdm12)
 
 
+def m31velocity():
+    """Calculate Cartesian velocity to assign to M31
+    van der Marel+ 2012 d = 770 kpc
+    PM: pmra (with cosdec factor), pmdec = 49, -38 microarcsec/yr, van der Marel+ 2019, HST+Gaia
+    note error ~ 11 muas/yr leading to ~40 km/s velocity errors
+   """
+    kms = u.km / u.s
+    distance = 770. * u.kpc  # vdMarel12
+    radial_velocity = -300. * kms
+    pmra = 49.e-3 * u.mas / u.yr
+    pmdec = -38.e-3 * u.mas / u.yr
+    print((pmra * distance / u.rad).to(kms))
+    print((pmdec * distance / u.rad).to(kms))
+    print(radial_velocity)
+
+
 def m33velocity():
-    """Calculate cartesian velocity to assign to M33, with vdm12 assumptions"""
+    """Calculate Cartesian velocity to assign to M33, with vdm12 assumptions"""
     kms = u.km / u.s
     distance = 794. * u.kpc
     radial_velocity = -180. * kms
@@ -88,21 +105,21 @@ def test_m33galactocentric():
 
     c0 = SkyCoord(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
                   gal_distance=794.*u.kpc,
-    #               galvel_heliocentric=representation.CartesianDifferential([133.6, -47.0, -180.] * kms))
-    #               galvel_heliocentric=representation.CartesianDifferential([98.2, -7.2, -180.] * kms))
-    #               galvel_heliocentric=representation.CartesianDifferential([17.7, -53.1, -180.] * kms))  no rot corr
-                  galvel_heliocentric=representation.CartesianDifferential([87.3, 28.2, -180.] * kms),
+    #               galvel_heliocentric=CartesianDifferential([133.6, -47.0, -180.] * kms))
+    #               galvel_heliocentric=CartesianDifferential([98.2, -7.2, -180.] * kms))
+    #               galvel_heliocentric=CartesianDifferential([17.7, -53.1, -180.] * kms))  no rot corr
+                  galvel_heliocentric=CartesianDifferential([87.3, 28.2, -180.] * kms),
                   frame=M33Frame)
 
     # test - closer to M31 props
     # c0 = M33Frame(x=0.*u.kpc, y=0.*u.kpc, z=0.*u.kpc, v_x=0.*kms, v_y=0.*kms, v_z=0.*kms,
     #               # gal_coord = ICRS(ra=10.68470833 * u.degree, dec=41.26875 * u.degree),
     #               gal_distance=794.*u.kpc,
-    #               # galvel_heliocentric=representation.CartesianDifferential([125.2, -73.8, -301.] * kms))
-    #               # galvel_heliocentric=representation.CartesianDifferential([125.2, -73.8, -180.] * kms))
-    #               # galvel_heliocentric = representation.CartesianDifferential([125.2, -53.1, -180.] * kms))
-    #               # galvel_heliocentric=representation.CartesianDifferential([17.7, -53.1, -180.] * kms))
-    #               galvel_heliocentric=representation.CartesianDifferential([87.3, 28.2, -180.] * kms))
+    #               # galvel_heliocentric=CartesianDifferential([125.2, -73.8, -301.] * kms))
+    #               # galvel_heliocentric=CartesianDifferential([125.2, -73.8, -180.] * kms))
+    #               # galvel_heliocentric = CartesianDifferential([125.2, -53.1, -180.] * kms))
+    #               # galvel_heliocentric=CartesianDifferential([17.7, -53.1, -180.] * kms))
+    #               galvel_heliocentric=CartesianDifferential([87.3, 28.2, -180.] * kms))
 
     print(c0)
     c_i = c0.transform_to(ICRS)
